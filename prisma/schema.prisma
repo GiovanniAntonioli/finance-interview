@@ -1,13 +1,74 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Invoice {
+  id               String    @id @default(cuid())
+  externalId       String    @unique
+  invoiceNumber    String
+  customerId       String
+  customerName     String
+  customerEmail    String?
+  amountDueCents   Int
+  amountPaidCents  Int       @default(0)
+  providerStatus   String
+  financeStatus    String    @default("open")
+  invoiceDate      DateTime?
+  dueDate          DateTime?
+  hostedInvoiceUrl String?
+  paymentReference String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  auditEntries AuditEntry[]
+
+  @@index([customerId])
+  @@index([financeStatus])
+  @@index([customerId, financeStatus])
+}
+
+model AuditEntry {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  previousStatus String
+  nextStatus     String
+  reason         String
+  reference      String?
+  actor          String
+  occurredAt     DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model PortalToken {
+  id             String    @id @default(cuid())
+  customerId     String
+  tokenHash      String    @unique
+  status         String    @default("active")
+  expiresAt      DateTime
+  accessCount    Int       @default(0)
+  lastAccessedAt DateTime?
+  createdBy      String
+  createdAt      DateTime  @default(now())
+
+  @@index([customerId])
+  @@index([tokenHash])
+}
+
+model CollectionEvent {
+  id                String   @id @default(cuid())
+  eventId           String   @unique
+  type              String
+  invoiceExternalId String?
+  customerId        String?
+  payload           Json
+  occurredAt        DateTime
+
+  @@index([customerId])
+  @@index([invoiceExternalId])
 }

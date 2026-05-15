@@ -117,17 +117,42 @@ model CollectionEvent {
 
 ```
 src/
-├── lib/
-│   ├── aging.ts              # Função pura: calculateAging(dueDate, today) → AgingResult
-│   ├── reminder-engine.ts    # Função pura: generateReminderActions(invoices, today) → Action[]
-│   ├── token-service.ts      # generateToken(), hashToken(), validateToken()
-│   └── db.ts                 # Prisma client singleton
-├── services/
-│   ├── invoice-service.ts    # getInvoices, getDashboardSummary, applyFinanceDecision
-│   ├── portal-service.ts     # createPortalToken, getCustomerPortalData
-│   └── customer-service.ts   # resolveCustomerIdentity, groupByCustomer
+├── domain/                   # Regras de negócio puras — sem dependência de DB ou framework
+│   ├── aging.ts              # calculateAging(dueDate, today) → AgingResult
+│   └── reminder-engine.ts    # generateReminderActions(invoices, today) → Action[]
+│
+├── repositories/             # Acesso a dados — só conhece Prisma, retorna entidades de domínio
+│   ├── invoice.repository.ts   # findAll, findById, findByCustomer, updateFinanceStatus
+│   ├── audit.repository.ts     # createEntry, findByInvoice
+│   ├── portal-token.repository.ts  # create, findByHash, revokeAll, updateAccess
+│   └── customer.repository.ts  # groupByCustomerId, getDisplayName
+│
+├── services/                 # Casos de uso — orquestra domain + repositories
+│   ├── invoice.service.ts    # getDashboardSummary, applyFinanceDecision
+│   ├── portal.service.ts     # createPortalToken, getCustomerPortalData
+│   └── reminder.service.ts   # runReminderEngine (busca invoices, chama domain)
+│
+├── lib/                      # Utilitários técnicos compartilhados
+│   ├── db.ts                 # Prisma client singleton
+│   ├── token.ts              # generateRawToken(), hashToken()
+│   └── email-provider.ts     # EmailProvider interface + FakeEmailProvider
+│
 └── types/
     └── index.ts              # AgingBand, FinanceStatus, ReminderAction, etc.
+```
+
+### Fluxo de dependência (sem ciclos)
+
+```
+domain/     ← sem dependências externas (funções puras)
+    ↑
+repositories/ ← depende de lib/db.ts e types/
+    ↑
+services/   ← depende de domain/ + repositories/ + lib/
+    ↑
+app/api/    ← depende de services/ (Route Handlers do Next.js)
+    ↑
+app/(pages) ← depende de services/ ou chama api/ via fetch
 ```
 
 ## Decisões de Design
