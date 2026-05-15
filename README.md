@@ -1,273 +1,160 @@
-# AI-Native Greenfield Build: AR Collections Portal
+# AR Collections Portal
 
-## Context
+Internal AR collections tool for Filterbuy. Allows the finance team to monitor open receivables, generate secure customer payment links, make finance decisions on invoices, and run a reminder/escalation engine.
 
-You are building a greenfield AR Collections Portal for Filterbuy.
+## Stack
 
-Filterbuy receives invoice data from an external provider. Some customers are overdue. Accounting needs a lightweight internal tool to see open AR, generate secure customer payment links, and automate collection reminders.
+- **Next.js 15** (App Router) — server and client components
+- **TypeScript** (strict mode)
+- **Prisma 6** + **PostgreSQL 16**
+- **Tailwind CSS 4**
+- **Jest** + **ts-jest** — unit and integration tests
+- **Docker Compose** — app + database
 
-This is not a request to build a full finance platform. Build a trustworthy first production slice.
+## Setup
 
-## Interview Format
+### Prerequisites
 
-This exercise starts live with the interview team. Use the live session to clarify requirements, set up your AI execution loop, make early implementation progress, and explain your decisions as you work.
+- Docker and Docker Compose
+- Node.js 20+
 
-After the call, you will have up to 2 additional hours to finish, verify, and package your submission.
+### Running with Docker Compose
 
-## Operational Setup
-
-Do your work in a fork under your own GitHub profile or organization. This is the repository we will evaluate.
-
-1. Fork this repository into your own GitHub account.
-2. Clone your fork, not the original Filterbuy repository:
-
-   ```bash
-   git clone git@github.com:<your-github-user-or-org>/finance-interview.git
-   cd finance-interview
-   ```
-
-3. Confirm `origin` points to your fork:
-
-   ```bash
-   git remote -v
-   ```
-
-   Expected shape:
-
-   ```text
-   origin  git@github.com:<your-github-user-or-org>/finance-interview.git (fetch)
-   origin  git@github.com:<your-github-user-or-org>/finance-interview.git (push)
-   ```
-
-4. Build your solution in that cloned fork.
-5. Commit all work products and push them to your fork.
-6. Give the interview team access to your fork for evaluation. If your fork is private, add the requested Filterbuy reviewers as collaborators or grant access to the requested GitHub team.
-
-Do not push your implementation to the original Filterbuy exercise repository.
-
-Commit everything material that AI produces for the project, not only the final app code. This includes AI-generated specs, implementation plans, review notes, prompt/context files, test plans, and any other artifacts that influenced your solution. If you reject an AI-generated artifact, keep the relevant summary or excerpt in `AI_WORKLOG.md` and explain why.
-
-## Your Job
-
-Build a working AR collections system that can:
-
-1. Load invoice data from the provided JSON fixtures.
-2. Show an internal AR dashboard grouped by customer.
-3. Compute aging days and aging buckets.
-4. Preserve separate provider status and finance status.
-5. Allow finance users to mark invoices as paid, uncollectible, or reopened.
-6. Record an audit trail for finance decisions.
-7. Generate secure customer portal links.
-8. Expose a public customer portal page where a customer can view only their own eligible invoices.
-9. Generate reminder and escalation actions based on due dates and aging days.
-10. Include meaningful tests.
-
-## Required Deliverables
-
-Your submission must include:
-
-- A working app.
-- A working `docker-compose.yml` that can run the app and any required services from a clean checkout.
-- Tests.
-- A project `README.md` explaining setup, architecture, tradeoffs, and how to run verification.
-- `AI_WORKLOG.md` documenting how you used AI agents.
-- A short walkthrough of what you built and what you would do next.
-
-This starter repo intentionally contains only instructions and datasets. You choose the stack.
-
-## Fixtures
-
-Use these fixtures as your starting data:
-
-- `datasets/invoices.json`
-- `datasets/collection_events.json`
-
-You may transform the data into your chosen database schema during ingestion, but preserve the source fields and ambiguity. Do not silently clean away the edge cases.
-
-Use `2026-05-15` as the default deterministic "today" for tests and demo data unless your app explicitly allows another date to be supplied.
-
-## Core Business Rules
-
-### Aging
-
-Compute aging from `dueDate` to the supplied "today" date.
-
-Required aging buckets:
-
-- `current`: due today or in the future
-- `1-30`: 1 to 30 days overdue
-- `31-60`: 31 to 60 days overdue
-- `61-90`: 61 to 90 days overdue
-- `90+`: more than 90 days overdue
-
-Invoices with no `dueDate` should not crash the system. Make a deliberate product decision for how they appear in the dashboard and reminder engine, then document it.
-
-### Status Separation
-
-`providerStatus` is the external provider's source state. Treat it as read-only synced data.
-
-`financeStatus` is Filterbuy's internal business decision. It may differ from provider status.
-
-Only invoices with `financeStatus = "open"` count as collectible open AR and reminder candidates.
-
-### Finance Decisions
-
-Support these decisions:
-
-- Mark paid
-- Mark uncollectible
-- Reopen
-
-Each transition must:
-
-- Require a reason.
-- Accept an optional reference, such as a check number or support ticket.
-- Create an audit trail entry with previous status, next status, reason, reference, actor, and timestamp.
-
-### Internal AR Dashboard
-
-Minimum useful dashboard:
-
-- Total open AR.
-- Aging breakdown.
-- Customer table with:
-  - customer
-  - email
-  - open invoice count
-  - total open amount
-  - oldest aging days
-  - portal link status
-  - recommended next action
-
-Grouping should use stable customer identity, not only display name. The fixture includes same-customer name variation.
-
-### Secure Portal Links
-
-Finance users must be able to generate a customer portal link.
-
-Expected design:
-
-- Generate a random token.
-- Store only a token hash.
-- Expire tokens.
-- Scope tokens to a specific customer ID.
-- Allow revocation or inactive status.
-- Track access count and last accessed time.
-
-Never store raw tokens at rest. Never expose invoices for another customer through the portal.
-
-### Public Customer Portal
-
-The public portal page should:
-
-- Have no internal dashboard chrome.
-- Show customer name.
-- Show total open balance.
-- List that customer's open invoices.
-- Show invoice number, due date, aging, amount due, and provider payment link when available.
-- Exclude paid, uncollectible, void, refunded, or other ineligible invoices.
-- Never show invoices belonging to another customer.
-
-### Reminder and Escalation Engine
-
-Build a script, worker, service method, or UI action that accepts a supplied "today" date and returns actions to take. Do not send real emails.
-
-Design a clean boundary, such as:
-
-- `EmailProvider`
-- fake or in-memory implementation
-- action log
-- tests
-
-Example actions:
-
-```json
-[
-  {
-    "type": "customer_reminder",
-    "invoiceExternalId": "inv_001",
-    "customerId": "cus_acme",
-    "customerEmail": "ap@acme.example",
-    "template": "past_due",
-    "reason": "Invoice is 44 days overdue"
-  },
-  {
-    "type": "internal_alert",
-    "customerId": "cus_beta",
-    "recipient": "ar-team@filterbuy.com",
-    "reason": "Customer has invoice 90+ days overdue and no email"
-  }
-]
+```bash
+cp .env.example .env
+docker-compose up --build
 ```
 
-Suggested behavior:
+The app will be available at `http://localhost:3000`.
 
-- Upcoming due reminder: invoice due in 7 days.
-- Past due reminder: invoice is 1 to 30 days overdue.
-- Escalation: invoice is 31 or more days overdue.
-- High-risk escalation: invoice is more than 90 days overdue.
-- Missing customer email should block customer reminders and produce an internal alert.
-- Paid and uncollectible invoices should not produce reminder actions.
-- Missing due date should produce an internal review action, not a customer reminder.
+### Running locally (without Docker)
 
-You may adjust cadence if you document the rules and test them.
+```bash
+cp .env.example .env
+# Edit .env with your local PostgreSQL connection string
 
-## AI-Native Requirement
+npm install
+npx prisma migrate deploy
+npm run seed
+npm run dev
+```
 
-Do not approach this as a normal coding exercise.
+### Environment variables
 
-We expect you to create an AI execution loop:
+```
+DATABASE_URL=postgresql://finance:finance@localhost:5432/finance_db
+```
 
-- Have one agent inspect the requirements and produce a system plan.
-- Have another generate an initial implementation.
-- Have another generate tests and edge cases.
-- Have another review the diff for correctness and security.
-- Use a browser agent or preview to validate the UI.
-- Document where you accepted or rejected AI output.
+## Seeding the database
 
-You are allowed to move fast. You are not allowed to be gullible.
+```bash
+npm run seed
+```
 
-Keep `AI_WORKLOG.md` with:
+Loads `datasets/invoices.json` (180 invoices) and `datasets/collection_events.json` (80 events) into the database.
 
-- tools and agents used
-- prompts or task instructions
-- important outputs
-- accepted suggestions
-- rejected suggestions
-- verification steps
-- remaining risks
+## Running tests
 
-Good AI usage looks like operating an execution team, not asking autocomplete to fill files.
+```bash
+npm test
+```
 
-## Required Tests
+Tests cover all 13 required scenarios from the spec: aging bucket boundaries, finance status transitions, audit trail, portal token security, customer isolation, reminder eligibility, missing email/due date behavior, and paid invoice exclusion.
 
-Include tests for:
+## Architecture
 
-- Aging bucket boundaries.
-- Finance status versus provider status.
-- Customer grouping despite name variation.
-- Finance status transitions.
-- Audit entry creation.
-- Valid portal token access.
-- Expired portal token rejection.
-- Revoked or inactive portal token rejection.
-- Portal customer isolation.
-- Reminder eligibility.
-- Missing email behavior.
-- Missing due date behavior.
-- Paid invoices excluded from AR and reminders.
+```
+src/
+  domain/          # Pure business logic (no I/O)
+    aging.ts       # Aging calculation and band classification
+    reminder-engine.ts  # Reminder/escalation action generator
+  repositories/    # Database access (Prisma)
+    invoice.repository.ts
+    audit.repository.ts
+    customer.repository.ts
+    portal-token.repository.ts
+  services/        # Orchestration layer
+    invoice.service.ts   # Dashboard summary + finance decisions
+    portal.service.ts    # Token generation and validation
+  app/
+    api/           # HTTP endpoints
+      dashboard/
+      invoices/[id]/status/
+      portal-tokens/
+      portal/[token]/
+      reminders/
+    dashboard/     # Internal finance UI
+    portal/[token]/ # Public customer portal
+  types/           # Shared TypeScript types
+  lib/
+    db.ts          # Prisma singleton
+    token.ts       # Token generation and hashing
+```
 
-## Important Invariants
+## API Endpoints
 
-Preserve these invariants:
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/dashboard?today=YYYY-MM-DD` | AR summary + customer table |
+| POST | `/api/invoices/:id/status` | Apply finance decision |
+| POST | `/api/portal-tokens` | Generate customer portal link |
+| GET | `/api/portal/:token?today=YYYY-MM-DD` | Customer portal data |
+| GET | `/api/reminders?today=YYYY-MM-DD` | Reminder and escalation actions |
 
-- Only `financeStatus = "open"` invoices count as collectible AR.
-- Provider status is source data, not the finance decision.
-- Finance decisions require audit trail.
-- Finance decisions require a reason.
-- Portal tokens are hashed at rest.
-- Portal tokens are scoped to one customer.
-- Expired or revoked tokens fail.
-- Public portal cannot leak another customer's invoices.
-- Missing customer email blocks customer reminders and may trigger internal alert.
-- Aging and reminders are deterministic based on a supplied date.
+## Key Design Decisions
+
+### Stable customer identity
+Customers are grouped by `customerId`, not `customerName`. The fixture includes name variations for the same customer (e.g. "Acme HVAC" and "ACME HVAC LLC" share `cus_acme`). The repository deduplicates by `customerId` and prefers the most recent non-empty email across all invoices.
+
+### Two status fields
+`providerStatus` is read-only synced data from the external provider. `financeStatus` is Filterbuy's internal decision. Only `financeStatus = "open"` invoices count as collectible AR.
+
+### Portal token security
+Raw tokens are never stored. Only a SHA-256 hash is persisted. The raw token is returned once via the API and immediately opened in the customer's browser. Previous tokens are revoked on regeneration.
+
+### Invoices without dueDate
+These fall into the `no-due-date` band. They are excluded from aging calculations and do not generate customer reminders. The reminder engine generates an `internal_review / missing_due_date` action for manual review by the AR team.
+
+### Deterministic dates
+All aging and reminder logic accepts a `today: Date` parameter — `new Date()` is never called internally. This makes every calculation testable and reproducible with `2026-05-15` as the demo date.
+
+### Reminder engine vs dashboard
+The reminder engine (`/api/reminders`) generates per-invoice actions for automated consumption (e.g. a daily cron job that would send emails). The dashboard "Next Action" column uses an equivalent inline function to show a per-customer recommendation without calling the engine endpoint.
+
+## Reminder Engine Behavior
+
+| Condition | Action |
+|-----------|--------|
+| Due in ≤ 7 days, has email | `customer_reminder / due_soon` |
+| 1–30 days overdue, has email | `customer_reminder / past_due` |
+| 31–89 days overdue, has email | `customer_reminder / escalation` |
+| 90+ days overdue (always) | `internal_alert / high_risk_escalation` |
+| 90+ days overdue, has email | + `customer_reminder / escalation` |
+| Overdue, no email | `internal_alert / missing_email_escalation` |
+| No due date | `internal_review / missing_due_date` |
+| Paid or uncollectible | no action |
+
+## Verification
+
+```bash
+# 1. Seed and start
+npm run seed
+npm run dev
+
+# 2. Dashboard (use date picker to change "today")
+open http://localhost:3000/dashboard
+
+# 3. Reminder engine
+curl "http://localhost:3000/api/reminders?today=2026-05-15"
+
+# 4. Run tests
+npm test
+```
+
+## What I would do next
+
+- Connect the reminder engine to a real email provider (SendGrid, Resend) behind a feature flag
+- Add pagination and filtering to the customer table
+- Add webhook ingestion to sync `providerStatus` in real time
+- Per-invoice finance decisions instead of per-customer modal
+- Role-based access control for the internal dashboard

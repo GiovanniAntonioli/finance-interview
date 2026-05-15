@@ -28,13 +28,13 @@ export default function DashboardPage() {
           <h1 className="text-xl font-bold text-gray-900">AR Collections Portal</h1>
           <p className="text-sm text-gray-500">Dashboard Interno — Contas a Receber</p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Data base:</label>
+        <div className="flex items-center gap-2 mr-24">
+          <label className="text-sm font-medium text-gray-900">Data base:</label>
           <input
             type="date"
             value={today}
             onChange={e => setToday(e.target.value)}
-            className="border rounded-lg px-2 py-1 text-sm"
+            className="border rounded-lg px-2 py-1 text-sm text-gray-900 font-medium"
           />
         </div>
       </header>

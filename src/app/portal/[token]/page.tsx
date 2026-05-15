@@ -65,14 +65,14 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
               <tbody className="divide-y divide-gray-100">
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{inv.invoiceNumber}</td>
-                    <td className="px-4 py-3 text-gray-600">{inv.dueDate ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{inv.invoiceNumber}</td>
+                    <td className="px-4 py-3 text-gray-900">{inv.dueDate ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${inv.agingBand === 'current' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {BAND_LABEL[inv.agingBand]}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">{fmt(inv.amountDueCents)}</td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{fmt(inv.amountDueCents)}</td>
                     <td className="px-4 py-3 text-right">
                       {inv.hostedInvoiceUrl ? (
                         <a href={inv.hostedInvoiceUrl} target="_blank" rel="noreferrer" className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700">

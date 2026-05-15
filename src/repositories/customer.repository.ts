@@ -14,12 +14,15 @@ export async function getCustomerSummaries(): Promise<CustomerSummary[]> {
 
   const seen = new Map<string, CustomerSummary>()
   for (const r of rows) {
-    if (!seen.has(r.customerId)) {
+    const existing = seen.get(r.customerId)
+    if (!existing) {
       seen.set(r.customerId, {
         customerId: r.customerId,
         displayName: r.customerName,
-        email: r.customerEmail,
+        email: r.customerEmail || null,
       })
+    } else if (!existing.email && r.customerEmail) {
+      existing.email = r.customerEmail
     }
   }
   return Array.from(seen.values())

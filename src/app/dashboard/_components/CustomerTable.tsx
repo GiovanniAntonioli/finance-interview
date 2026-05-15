@@ -77,7 +77,6 @@ interface Props {
 
 export function CustomerTable({ customers, onRefresh }: Props) {
   const [modal, setModal] = useState<{ customerId: string } | null>(null)
-  const [portalLinks, setPortalLinks] = useState<Record<string, string>>({})
   const [generating, setGenerating] = useState<string | null>(null)
 
   const generateLink = async (customerId: string) => {
@@ -89,7 +88,7 @@ export function CustomerTable({ customers, onRefresh }: Props) {
     })
     const data = await res.json()
     if (data.portalUrl) {
-      setPortalLinks(prev => ({ ...prev, [customerId]: `${window.location.origin}${data.portalUrl}` }))
+      window.open(`${window.location.origin}${data.portalUrl}`, '_blank', 'noreferrer')
     }
     setGenerating(null)
     onRefresh()
@@ -122,27 +121,23 @@ export function CustomerTable({ customers, onRefresh }: Props) {
               <tr key={c.customerId} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-900">{c.displayName}</td>
                 <td className="px-4 py-3 text-gray-500">
-                  {c.email ?? <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">sem email</span>}
+                  {c.email || <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">sem email</span>}
                 </td>
-                <td className="px-4 py-3 text-right">{c.openInvoiceCount}</td>
-                <td className="px-4 py-3 text-right font-medium">{fmt(c.totalOpenCents)}</td>
+                <td className="px-4 py-3 text-right text-gray-900">{c.openInvoiceCount}</td>
+                <td className="px-4 py-3 text-right font-medium text-gray-900">{fmt(c.totalOpenCents)}</td>
                 <td className="px-4 py-3 text-right">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${BAND_BADGE[c.agingBand]}`}>
-                    {c.maxAgingDays !== null ? `${c.maxAgingDays}d` : '—'} ({c.agingBand})
+                    {c.agingBand === 'no-due-date' ? 'sem vencimento' : c.maxAgingDays !== null ? `${c.maxAgingDays}d` : '—'}
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {portalLinks[c.customerId] ? (
-                    <a href={portalLinks[c.customerId]} target="_blank" rel="noreferrer" className="text-blue-600 underline text-xs">Abrir</a>
-                  ) : (
-                    <button
-                      onClick={() => generateLink(c.customerId)}
-                      disabled={generating === c.customerId}
-                      className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
-                    >
-                      {c.portalLinkStatus === 'active' ? 'Renovar' : 'Gerar'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => generateLink(c.customerId)}
+                    disabled={generating === c.customerId}
+                    className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    {generating === c.customerId ? 'Gerando...' : c.portalLinkStatus === 'active' ? 'Renovar' : 'Gerar'}
+                  </button>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-600">{c.nextAction}</td>
               </tr>
