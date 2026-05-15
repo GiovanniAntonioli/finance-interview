@@ -8,13 +8,16 @@
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
-    "seed": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^7.8.0",
+    "@prisma/client": "^6.19.3",
     "dotenv": "^17.4.2",
     "next": "15.5.18",
-    "prisma": "^7.8.0",
+    "prisma": "^6.19.3",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
@@ -28,6 +31,8 @@
     "jest-environment-node": "^30.4.1",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }
